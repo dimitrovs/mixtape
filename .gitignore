@@ -9,3 +9,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# LAME source (downloaded by setup_lame.sh, not checked in)
+app/src/main/cpp/lame/

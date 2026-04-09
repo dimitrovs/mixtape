@@ -22,18 +22,29 @@ Android app that automatically detects USB storage and transfers all your music 
 
 - **Min SDK**: 26 (Android 8.0)
 - **Target SDK**: 34
-- **Language**: Kotlin
-- **Conversion**: Uses Android's `MediaCodec` API (decode to PCM, re-encode to AAC in ADTS container)
+- **Language**: Kotlin + C (NDK)
+- **MP3 encoding**: LAME encoder via JNI — produces real MP3 files that work on any car stereo
+- **Audio decoding**: Android `MediaCodec` decodes any format (FLAC, WAV, OGG, etc.) to PCM
 - **USB access**: Storage Access Framework (SAF) + `DocumentFile` API
 - **USB detection**: `USB_DEVICE_ATTACHED` intent filter for USB mass storage class devices
 
 ## Building
+
+First, download the LAME MP3 encoder source (one-time setup):
+
+```bash
+./setup_lame.sh
+```
+
+Then build the APK:
 
 ```bash
 ./gradlew assembleDebug
 ```
 
 The APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
+
+**Requirements**: Android SDK with NDK and CMake installed (Android Studio installs these automatically).
 
 ## Permissions
 
