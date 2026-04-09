@@ -26,19 +26,6 @@ android {
         }
     }
 
-    signingConfigs {
-        create("release") {
-            // CI generates this keystore; local builds fall back to debug signing
-            val ks = rootProject.file("release.keystore")
-            if (ks.exists()) {
-                storeFile = ks
-                storePassword = "mixtape123"
-                keyAlias = "mixtape"
-                keyPassword = "mixtape123"
-            }
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -46,11 +33,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = if (rootProject.file("release.keystore").exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // Use debug signing; CI signs the APK with apksigner after build
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
