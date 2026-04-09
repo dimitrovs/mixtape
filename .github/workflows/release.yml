@@ -36,8 +36,13 @@ jobs:
           chmod +x setup_lame.sh
           ./setup_lame.sh
 
-      - name: Generate self-signed keystore
+      - name: Build release APK
         run: |
+          gradle assembleRelease --no-daemon
+
+      - name: Sign APK
+        run: |
+          # Generate self-signed keystore
           keytool -genkeypair \
             -keystore release.keystore \
             -alias mixtape \
@@ -48,13 +53,22 @@ jobs:
             -keypass mixtape123 \
             -dname "CN=Mixtape, OU=Dev, O=Mixtape, L=Unknown, ST=Unknown, C=US"
 
-      - name: Build signed release APK
-        run: |
-          gradle assembleRelease --no-daemon
+          # Find build-tools version
+          BUILD_TOOLS=$(ls -1 $ANDROID_HOME/build-tools/ | sort -V | tail -1)
 
-      - name: Rename APK
-        run: |
-          cp app/build/outputs/apk/release/app-release.apk mixtape-release.apk
+          # Align
+          $ANDROID_HOME/build-tools/$BUILD_TOOLS/zipalign -v -p 4 \
+            app/build/outputs/apk/release/app-release.apk \
+            mixtape-aligned.apk
+
+          # Sign
+          $ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner sign \
+            --ks release.keystore \
+            --ks-key-alias mixtape \
+            --ks-pass pass:mixtape123 \
+            --key-pass pass:mixtape123 \
+            --out mixtape-release.apk \
+            mixtape-aligned.apk
 
       - name: Get version info
         id: version
