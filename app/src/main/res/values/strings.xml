@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mixtape</string>
+    <string name="usb_not_connected">No USB storage detected. Please connect a USB drive.</string>
+    <string name="select_usb_storage">Select USB Storage</string>
+    <string name="start_transfer">Start Transfer</string>
+    <string name="cancel">Cancel</string>
+    <string name="scanning_music">Scanning for music files…</string>
+    <string name="converting">Converting and copying…</string>
+    <string name="complete">Transfer complete!</string>
+    <string name="no_music_found">No music files found on this device.</string>
+    <string name="permission_required">Storage permission is required to find music files.</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="notification_channel_name">Music Transfer</string>
+    <string name="notification_channel_description">Shows progress of music conversion and transfer</string>
+    <string name="files_found">%d music files found</string>
+    <string name="progress_format">%1$d / %2$d files processed</string>
+    <string name="already_mp3">Already MP3 — copying</string>
+    <string name="converting_file">Converting to MP3</string>
+    <string name="skipped">Skipped (error)</string>
+    <string name="done">Done</string>
+</resources>
