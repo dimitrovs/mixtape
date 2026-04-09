@@ -61,8 +61,7 @@ typedef float ieee754_float32_t;
 #define TAKEHIRO_IEEE754_HACK 1
 #define USE_FAST_LOG 1
 
-#define HAVE_MPGLIB 1
-#define DECODE_ON_THE_FLY 1
+/* mpglib (MP3 decoder) disabled - we use Android MediaCodec for decoding */
 
 #endif /* LAME_CONFIG_H */
 CONFIGEOF
