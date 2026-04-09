@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,6 +21,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
@@ -30,18 +36,8 @@ jobs:
           chmod +x setup_lame.sh
           ./setup_lame.sh
 
-      - name: Generate Gradle wrapper
+      - name: Generate self-signed keystore
         run: |
-          gradle wrapper --gradle-version 8.5
-
-      - name: Build debug APK
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - name: Sign APK with debug keystore
-        run: |
-          # Generate a self-signed keystore for release
           keytool -genkeypair \
             -keystore release.keystore \
             -alias mixtape \
@@ -52,29 +48,13 @@ jobs:
             -keypass mixtape123 \
             -dname "CN=Mixtape, OU=Dev, O=Mixtape, L=Unknown, ST=Unknown, C=US"
 
-          # Build release APK
-          ./gradlew assembleRelease || true
+      - name: Build signed release APK
+        run: |
+          gradle assembleRelease --no-daemon
 
-          # If release build isn't configured, use the debug APK
-          if [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
-            # Align and sign
-            ${ANDROID_HOME}/build-tools/34.0.0/zipalign -v -p 4 \
-              app/build/outputs/apk/release/app-release-unsigned.apk \
-              app/build/outputs/apk/release/app-release-aligned.apk
-
-            ${ANDROID_HOME}/build-tools/34.0.0/apksigner sign \
-              --ks release.keystore \
-              --ks-key-alias mixtape \
-              --ks-pass pass:mixtape123 \
-              --key-pass pass:mixtape123 \
-              --out app/build/outputs/apk/release/mixtape-release.apk \
-              app/build/outputs/apk/release/app-release-aligned.apk
-          else
-            # Fall back to debug APK (already signed with debug key)
-            mkdir -p app/build/outputs/apk/release
-            cp app/build/outputs/apk/debug/app-debug.apk \
-               app/build/outputs/apk/release/mixtape-release.apk
-          fi
+      - name: Rename APK
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk mixtape-release.apk
 
       - name: Get version info
         id: version
@@ -92,10 +72,8 @@ jobs:
           body: |
             Automated build from commit ${{ github.sha }}.
 
-            **Install:** Download `mixtape-release.apk` below, transfer to your Android device, and install (enable "Install from unknown sources" if prompted).
+            **Install:** Download `mixtape-release.apk`, transfer to your Android device, and install (enable "Install from unknown sources" if prompted).
 
             > This APK is signed with a self-signed key for testing purposes.
-          files: app/build/outputs/apk/release/mixtape-release.apk
+          files: mixtape-release.apk
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
