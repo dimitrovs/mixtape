@@ -32,7 +32,7 @@ mkdir -p "${DEST_DIR}"
 cp -r "${TEMP_DIR}/lame-${LAME_VERSION}/include" "${DEST_DIR}/"
 cp -r "${TEMP_DIR}/lame-${LAME_VERSION}/libmp3lame" "${DEST_DIR}/"
 
-# Create config.h for Android
+# Create config.h for Android (Bionic libc)
 cat > "${DEST_DIR}/config.h" << 'CONFIGEOF'
 #ifndef LAME_CONFIG_H
 #define LAME_CONFIG_H
@@ -51,7 +51,13 @@ cat > "${DEST_DIR}/config.h" << 'CONFIGEOF'
 #define SIZEOF_LONG_LONG 8
 #define SIZEOF_DOUBLE 8
 
-/* Use IEEE754 hack for speed */
+/*
+ * Android Bionic does not have <ieee754.h> or ieee754_float32_t.
+ * LAME's util.h references this type when USE_FAST_LOG is defined.
+ * Define it here as a simple float (IEEE 754 single-precision).
+ */
+typedef float ieee754_float32_t;
+
 #define TAKEHIRO_IEEE754_HACK 1
 #define USE_FAST_LOG 1
 
@@ -60,6 +66,16 @@ cat > "${DEST_DIR}/config.h" << 'CONFIGEOF'
 
 #endif /* LAME_CONFIG_H */
 CONFIGEOF
+
+# Patch LAME source files for Android compatibility
+echo "Patching LAME for Android..."
+
+# Ensure all LAME .c files include config.h first (some rely on autotools doing it)
+for f in "${DEST_DIR}"/libmp3lame/*.c; do
+    if ! grep -q '#include "config.h"' "$f" 2>/dev/null; then
+        sed -i '1i #include "config.h"' "$f"
+    fi
+done
 
 # Clean up
 rm -rf "${TEMP_DIR}"

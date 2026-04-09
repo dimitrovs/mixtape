@@ -37,6 +37,7 @@ target_include_directories(mp3lame PRIVATE
 )
 
 target_compile_definitions(mp3lame PRIVATE
+    HAVE_CONFIG_H
     STDC_HEADERS
     HAVE_STDINT_H
     HAVE_MPGLIB
