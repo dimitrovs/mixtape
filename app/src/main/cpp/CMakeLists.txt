@@ -4,7 +4,7 @@ project("mixtape" LANGUAGES C)
 # LAME source directory - populated by setup_lame.sh
 set(LAME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lame)
 
-# LAME source files (core encoder only - no frontend/decoder)
+# LAME source files (encoder only - no mpglib decoder, MediaCodec handles decoding)
 set(LAME_SOURCES
     ${LAME_DIR}/libmp3lame/bitstream.c
     ${LAME_DIR}/libmp3lame/encoder.c
@@ -12,7 +12,6 @@ set(LAME_SOURCES
     ${LAME_DIR}/libmp3lame/gain_analysis.c
     ${LAME_DIR}/libmp3lame/id3tag.c
     ${LAME_DIR}/libmp3lame/lame.c
-    ${LAME_DIR}/libmp3lame/mpglib_interface.c
     ${LAME_DIR}/libmp3lame/newmdct.c
     ${LAME_DIR}/libmp3lame/presets.c
     ${LAME_DIR}/libmp3lame/psymodel.c
@@ -40,8 +39,6 @@ target_compile_definitions(mp3lame PRIVATE
     HAVE_CONFIG_H
     STDC_HEADERS
     HAVE_STDINT_H
-    HAVE_MPGLIB
-    DECODE_ON_THE_FLY
     USE_FAST_LOG
     TAKEHIRO_IEEE754_HACK
 )
