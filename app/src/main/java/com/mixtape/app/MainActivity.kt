@@ -15,6 +15,7 @@ import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.mixtape.app.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -24,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private var musicFiles: List<MusicFile> = emptyList()
     private var conversionService: ConversionService? = null
     private var serviceBound = false
+    private lateinit var musicFileAdapter: MusicFileAdapter
 
     private val usbReceiver = UsbReceiver()
 
@@ -51,7 +53,7 @@ class MainActivity : AppCompatActivity() {
             )
             destinationUri = it
             binding.statusText.text = "USB storage selected. Ready to transfer."
-            binding.startButton.isEnabled = musicFiles.isNotEmpty()
+            binding.startButton.isEnabled = musicFileAdapter.selectedCount > 0
         }
     }
 
@@ -92,6 +94,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
+        musicFileAdapter = MusicFileAdapter { selectedCount, totalCount ->
+            binding.selectedCountText.text =
+                getString(R.string.files_selected, selectedCount, totalCount)
+            binding.startButton.isEnabled = selectedCount > 0 && destinationUri != null
+            binding.selectAllCheckbox.isChecked = selectedCount == totalCount
+        }
+
+        binding.fileRecyclerView.layoutManager = LinearLayoutManager(this)
+        binding.fileRecyclerView.adapter = musicFileAdapter
+
+        binding.selectAllCheckbox.setOnClickListener {
+            if (binding.selectAllCheckbox.isChecked) {
+                musicFileAdapter.selectAll()
+            } else {
+                musicFileAdapter.deselectAll()
+            }
+        }
+
         binding.selectStorageButton.setOnClickListener {
             storagePickerLauncher.launch(null)
         }
@@ -158,6 +178,7 @@ class MainActivity : AppCompatActivity() {
                 if (musicFiles.isEmpty()) {
                     binding.statusText.text = getString(R.string.no_music_found)
                     binding.fileCountText.visibility = View.GONE
+                    binding.fileListSection.visibility = View.GONE
                 } else {
                     binding.statusText.text = getString(R.string.files_found, musicFiles.size)
                     binding.fileCountText.visibility = View.VISIBLE
@@ -167,6 +188,10 @@ class MainActivity : AppCompatActivity() {
                     binding.fileCountText.text =
                         "$mp3Count MP3 files (direct copy) + $convertCount files to convert"
 
+                    musicFileAdapter.setFiles(musicFiles)
+                    binding.fileListSection.visibility = View.VISIBLE
+                    binding.selectAllCheckbox.isChecked = true
+
                     binding.startButton.isEnabled = destinationUri != null
                 }
             }
@@ -175,16 +200,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun startTransfer() {
         val destUri = destinationUri ?: return
-        if (musicFiles.isEmpty()) return
+        val selectedFiles = musicFileAdapter.getSelectedFiles()
+        if (selectedFiles.isEmpty()) return
 
         // Bind to service
         val serviceIntent = Intent(this, ConversionService::class.java)
         startForegroundService(serviceIntent)
         bindService(serviceIntent, serviceConnection, BIND_AUTO_CREATE)
 
-        // Show progress UI
+        // Switch from file list to transfer log
+        binding.fileListSection.visibility = View.GONE
+        binding.logScrollView.visibility = View.VISIBLE
         binding.progressSection.visibility = View.VISIBLE
-        binding.progressBar.max = musicFiles.size
+        binding.progressBar.max = selectedFiles.size
         binding.progressBar.progress = 0
         binding.startButton.isEnabled = false
         binding.selectStorageButton.isEnabled = false
@@ -192,9 +220,8 @@ class MainActivity : AppCompatActivity() {
         binding.logText.text = ""
 
         // Start transfer once service is bound
-        // We wait briefly for the service to bind, then start
         binding.root.postDelayed({
-            conversionService?.startTransfer(musicFiles, destUri)
+            conversionService?.startTransfer(selectedFiles, destUri)
         }, 500)
     }
 

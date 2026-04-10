@@ -14,6 +14,8 @@
     <string name="notification_channel_name">Music Transfer</string>
     <string name="notification_channel_description">Shows progress of music conversion and transfer</string>
     <string name="files_found">%d music files found</string>
+    <string name="files_selected">%1$d of %2$d selected</string>
+    <string name="select_all">Select All</string>
     <string name="progress_format">%1$d / %2$d files processed</string>
     <string name="already_mp3">Already MP3 — copying</string>
     <string name="converting_file">Converting to MP3</string>

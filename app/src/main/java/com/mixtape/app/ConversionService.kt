@@ -11,6 +11,9 @@ import android.os.Binder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.documentfile.provider.DocumentFile
+import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import kotlinx.coroutines.*
 
 class ConversionService : Service() {
@@ -19,6 +22,7 @@ class ConversionService : Service() {
         const val CHANNEL_ID = "mixtape_transfer"
         const val NOTIFICATION_ID = 1
         const val ACTION_STOP = "com.mixtape.app.STOP"
+        private const val BUFFER_SIZE = 65536 // 64 KB
     }
 
     inner class LocalBinder : Binder() {
@@ -113,32 +117,34 @@ class ConversionService : Service() {
                         copyFile(file.uri, mixtapeDir, outputName)
                         successful++
                     } else {
-                        // Convert to MP3
+                        // Convert to MP3 via internal cache for performance
                         val status = getString(R.string.converting_file)
                         withContext(Dispatchers.Main) {
                             onProgress?.invoke(index + 1, total, file.displayName, status)
                         }
 
-                        val outFile = mixtapeDir.createFile("audio/mpeg", outputName)
-                        if (outFile != null) {
-                            contentResolver.openOutputStream(outFile.uri)?.use { os ->
-                                when (val result = converter.convertToMp3(file.uri, os)) {
-                                    is AudioConverter.ConversionResult.Success -> successful++
-                                    is AudioConverter.ConversionResult.Error -> {
-                                        failed++
-                                        // Clean up failed file
-                                        outFile.delete()
-                                        withContext(Dispatchers.Main) {
-                                            onProgress?.invoke(index + 1, total, file.displayName,
-                                                "Error: ${result.message}")
-                                        }
+                        val tempFile = File(cacheDir, "mixtape_tmp_${System.currentTimeMillis()}.mp3")
+                        try {
+                            val result = FileOutputStream(tempFile).use { fos ->
+                                BufferedOutputStream(fos, BUFFER_SIZE).use { bos ->
+                                    converter.convertToMp3(file.uri, bos)
+                                }
+                            }
+                            when (result) {
+                                is AudioConverter.ConversionResult.Success -> {
+                                    copyTempToDestination(tempFile, mixtapeDir, outputName)
+                                    successful++
+                                }
+                                is AudioConverter.ConversionResult.Error -> {
+                                    failed++
+                                    withContext(Dispatchers.Main) {
+                                        onProgress?.invoke(index + 1, total, file.displayName,
+                                            "Error: ${result.message}")
                                     }
                                 }
-                            } ?: run {
-                                failed++
                             }
-                        } else {
-                            failed++
+                        } finally {
+                            tempFile.delete()
                         }
                     }
                 } catch (e: Exception) {
@@ -178,7 +184,20 @@ class ConversionService : Service() {
         val destFile = destDir.createFile("audio/mpeg", fileName) ?: return
         contentResolver.openInputStream(sourceUri)?.use { input ->
             contentResolver.openOutputStream(destFile.uri)?.use { output ->
-                input.copyTo(output, bufferSize = 8192)
+                BufferedOutputStream(output, BUFFER_SIZE).use { bos ->
+                    input.copyTo(bos, bufferSize = BUFFER_SIZE)
+                }
+            }
+        }
+    }
+
+    private fun copyTempToDestination(tempFile: File, destDir: DocumentFile, fileName: String) {
+        val destFile = destDir.createFile("audio/mpeg", fileName) ?: return
+        contentResolver.openOutputStream(destFile.uri)?.use { output ->
+            BufferedOutputStream(output, BUFFER_SIZE).use { bos ->
+                tempFile.inputStream().use { input ->
+                    input.copyTo(bos, bufferSize = BUFFER_SIZE)
+                }
             }
         }
     }
