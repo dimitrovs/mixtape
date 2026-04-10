@@ -62,13 +62,15 @@ class MusicFileAdapter(
             binding.formatText.text = file.path.substringAfterLast(".").uppercase()
             binding.checkbox.isChecked = isSelected
 
-            val toggle = fun() {
-                val pos = this@ViewHolder.bindingAdapterPosition
-                if (pos == RecyclerView.NO_POSITION) return
-                val id = files[pos].id
-                if (id in selectedIds) selectedIds.remove(id) else selectedIds.add(id)
-                notifyItemChanged(pos)
-                onSelectionChanged(selectedIds.size, files.size)
+            val holder = this
+            val toggle = {
+                val pos = holder.adapterPosition
+                if (pos != RecyclerView.NO_POSITION) {
+                    val id = files[pos].id
+                    if (id in selectedIds) selectedIds.remove(id) else selectedIds.add(id)
+                    notifyItemChanged(pos)
+                    onSelectionChanged(selectedIds.size, files.size)
+                }
             }
 
             binding.checkbox.setOnClickListener { toggle() }
